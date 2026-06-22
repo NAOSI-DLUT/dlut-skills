@@ -1,0 +1,20 @@
+{
+  "name": "dlut-skills",
+  "version": "0.1.0",
+  "description": "Skills for practical daily campus and course workflows at Dalian University of Technology.",
+  "owner": {
+    "name": "NAOSI-DLUT"
+  },
+  "plugins": [
+    {
+      "name": "dlut-skills",
+      "source": "./",
+      "description": "Agent skills for DLUT campus life, coursework, documents, study planning, and data analysis.",
+      "version": "0.1.0",
+      "author": {
+        "name": "dlut-skills contributors"
+      },
+      "category": "education"
+    }
+  ]
+}

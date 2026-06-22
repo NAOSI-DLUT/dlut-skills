@@ -1,0 +1,3 @@
+display_name: Skill Template
+short_description: Template for creating a DLUT campus or coursework skill.
+default_prompt: Use this template to create a focused skill for a reusable DLUT campus, course, document, or analysis workflow.

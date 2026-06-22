@@ -1,0 +1,17 @@
+{
+  "name": "dlut-skills",
+  "version": "0.1.0",
+  "description": "Agent skills for practical daily campus and course workflows at Dalian University of Technology.",
+  "author": {
+    "name": "dlut-skills contributors"
+  },
+  "repository": "https://github.com/NAOSI-DLUT/dlut-skills",
+  "license": "MIT",
+  "keywords": [
+    "dlut",
+    "dalian-university-of-technology",
+    "campus",
+    "coursework",
+    "agent-skills"
+  ]
+}
