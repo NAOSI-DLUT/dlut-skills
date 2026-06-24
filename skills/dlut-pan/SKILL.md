@@ -27,7 +27,35 @@ description: 大工云盘（pan.dlut.edu.cn）API 调用 skill。用于通过 si
 
 ### 1. 获取 token
 
-使用 `POST` 请求，参数放在 query string 中，body 为空：
+优先尝试通过浏览器自动化获取 token，以减少用户手动向 agent 提供密码的环节。
+
+#### 方式 A：Playwright 浏览器获取（优先）
+
+如果当前 agent 支持 `open_browser_page` 等浏览器工具：
+
+1. 打开浏览器页面：`http://pan.dlut.edu.cn/cas`
+2. 提示用户在该页面完成统一身份认证（CAS）登录。若 CAS 需要验证码或二次认证，由用户手动处理。
+3. 等待登录完成，页面通常会跳转回云盘主页（`http://pan.dlut.edu.cn/`）。
+4. 使用 `run_playwright_code` 执行以下脚本提取 `token`。大工云盘将登录信息存储在 `localStorage.jStorage` 中，其结构为嵌套 JSON，需两层解析：
+
+```javascript
+return page.evaluate(() => {
+  try {
+    const jStorage = JSON.parse(localStorage.getItem('jStorage') || '{}');
+    const data = JSON.parse(jStorage.data || '{}');
+    return data.token || null;
+  } catch {
+    return null;
+  }
+});
+```
+
+5. 若上述方法未获取到 token（如云盘改版），可进一步尝试从 API 请求拦截、页面全局变量 `window.token` / `window.userInfo.token`，或刷新页面后检查网络请求中的 `token` 参数。
+6. 获取 token 成功后，立即关闭浏览器页面。
+
+#### 方式 B：API 直接登录（fallback）
+
+若不支持浏览器工具，或浏览器方式未能获取 token，则使用 `POST` 请求直接调用登录接口。参数放在 query string 中，body 为空：
 
 ```
 POST http://202.118.66.144:8088/v1/auth/sign_in
