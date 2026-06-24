@@ -6,14 +6,6 @@
 - Token 获取地址：`http://202.118.66.144:8088/v1/auth/sign_in`
 - 所有后续请求需在 Query 参数中携带 `token`。
 
-### 已知空间 root_id
-
-| 空间 | root_id | 说明 |
-|------|---------|------|
-| NAOSI 资料云盘 | `ak7an4chdvtq` | 共享课程资料、上传及阅读指南等 |
-
-> 个人空间 root_id 需通过登录后获取，与用户账号绑定。
-
 ---
 
 ## 1. 登录获取 Token
@@ -51,7 +43,50 @@ Content-Length: 0
 
 ---
 
-## 2. 列出目录
+## 2. 加入群组
+
+### 请求
+
+```http
+POST http://pan.dlut.edu.cn/v1/users/{user_id}/groups?group_id={group_id}&token={token}
+Content-Type: application/json
+
+{"remarks": "申请理由"}
+```
+
+> 注意：`group_id` 是群组 ID，不是 `root_id`。
+
+### 参数
+
+| 参数名    | 类型   | 必填 | 说明                     |
+|-----------|--------|------|--------------------------|
+| `user_id` | string | 是   | 用户 ID                  |
+| `group_id`| string | 是   | 群组 ID                  |
+| `token`   | string | 是   | 登录获取的 token         |
+| `remarks` | string | 否   | 申请备注（放在 body 中） |
+
+### 响应示例
+
+```json
+{
+  "relation": {
+    "is_activated": true,
+    "role": { "name": "member", "display_value": "成员" }
+  }
+}
+```
+
+- 若 `relation.is_activated` 为 `true`，说明该群组为公开群，用户**直接加入成功**。
+- 若 `relation.is_activated` 为 `false`，说明需要群主审批，用户状态为"审批中"。
+
+### NAOSI 资料云盘
+
+- 群组 ID：`ej7f8s176d8f`
+- 空间 root_id：`ak7an4chdvtq`
+
+---
+
+## 3. 列出目录
 
 ### 请求
 

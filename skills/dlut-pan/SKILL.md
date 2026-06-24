@@ -19,6 +19,16 @@ description: 大工云盘（pan.dlut.edu.cn）API 调用 skill。用于通过 si
 - 用户明确授权 agent 使用其账号信息调用 API。
 - agent 不得在日志、文件或对话中保存账号密码或 token。
 
+## 已知空间
+
+| 空间 | root_id | 说明 |
+|------|---------|------|
+| NAOSI 资料云盘 | `ak7an4chdvtq` | 共享课程资料、上传及阅读指南等，是最大的公共资料云盘 |
+
+> 个人空间 root_id 需通过登录后获取，与用户账号绑定。
+
+**搜索/查资料时优先使用 NAOSI 的 `root_id`（`ak7an4chdvtq`）**，因为该组织公开且资料最丰富。若用户未加入该组织，则回退到个人空间。
+
 ## API 参考
 
 详细接口定义见 `references/api-reference.md`。
@@ -75,7 +85,57 @@ Content-Length: 0
 
 返回体中包含 `token`，提取后用于后续请求。
 
-### 2. 列出目录
+### 2. 检查 NAOSI 组织成员资格（如适用）
+
+在通过浏览器方式获取 token 时，可同时读取 `localStorage.jStorage` 中的用户组织信息：
+
+```javascript
+return page.evaluate(() => {
+  try {
+    const jStorage = JSON.parse(localStorage.getItem('jStorage') || '{}');
+    const data = JSON.parse(jStorage.data || '{}');
+    return data.groupIDs || null;
+  } catch {
+    return null;
+  }
+});
+```
+
+- 如果返回结果中包含键 `NAOSI`（或其 `rootID` 为 `ak7an4chdvtq`），说明用户已加入 NAOSI 资料云盘，后续搜索优先使用 `root_id=ak7an4chdvtq`。
+- 如果用户未加入 NAOSI，agent 应**询问用户是否需要自动加入**。
+
+#### 加入 NAOSI 组织
+
+若用户同意加入，调用以下 API：
+
+```
+POST http://pan.dlut.edu.cn/v1/users/{user_id}/groups?group_id=ej7f8s176d8f&token={token}
+Content-Type: application/json
+
+{"remarks": ""}
+```
+
+参数说明：
+- `user_id`: 从 `jStorage.data.userid` 获取。
+- `group_id`: NAOSI 的组织 ID 为 `ej7f8s176d8f`（注意不是 `root_id`，而是 `groupID`）。
+- `token`: 登录获取的 token。
+
+返回示例：
+```json
+{
+  "relation": {
+    "is_activated": true,
+    "role": { "name": "member", "display_value": "成员" }
+  }
+}
+```
+
+- 若 `relation.is_activated` 为 `true`，说明该群组为公开群，用户**直接加入成功**，后续即可使用 `root_id=ak7an4chdvtq` 操作。
+- 若 `relation.is_activated` 为 `false`，说明需要群主审批，用户状态为"审批中"，agent 应提示用户等待审批通过后再操作。
+
+如果用户拒绝加入或加入流程失败，后续操作回退到个人空间（使用用户自己的 `root_id`）。
+
+### 3. 列出目录
 
 ```
 POST http://pan.dlut.edu.cn/v1/fileops/list_folder
@@ -88,13 +148,13 @@ Content-Length: 0
 ```
 
 参数说明：
-- `root_id`: 空间根目录 ID，如个人空间 `{root_id}`。
+- `root_id`: 空间根目录 ID，优先使用 NAOSI 的 `ak7an4chdvtq`；若用户未加入则使用个人空间 `root_id`。
 - `path`: 目录路径，根目录传 `%2F`（即 `/`）。
 - `token`: 上一步获取的 token。
 
 返回目录列表，字段通常包括：文件/目录名、类型、大小、更新时间、路径等。
 
-### 3. 搜索
+### 4. 搜索
 
 #### 搜索文件名
 
@@ -110,7 +170,7 @@ GET http://pan.dlut.edu.cn/v1/search/files
 
 参数说明：
 - `query`: 搜索关键词。
-- `root_id`: 空间根目录 ID（必填，否则返回 403）。
+- `root_id`: 空间根目录 ID（必填，否则返回 403）。**优先使用 `ak7an4chdvtq`（NAOSI）**；若用户未加入则使用个人空间 `root_id`。
 - `token`: 登录获取的 token。
 - `path`, `offset`, `limit`: 可选的范围和分页参数。
 
@@ -125,7 +185,7 @@ GET http://pan.dlut.edu.cn/v1/search/full_text_files
     &token={token}
 ```
 
-参数和响应格式与 `search/files` 相同，区别在于匹配文件内容而不仅是文件名。
+参数和响应格式与 `search/files` 相同，区别在于匹配文件内容而不仅是文件名。`root_id` 同样优先使用 NAOSI 的 `ak7an4chdvtq`。
 
 #### 搜索群组
 
@@ -144,7 +204,7 @@ GET http://pan.dlut.edu.cn/v1/search/groups
 
 返回包含 `total`、`offset`、`entries` 的结果集，entries 为群组信息列表。
 
-### 4. 下载文件
+### 5. 下载文件
 
 ```
 GET http://pan.dlut.edu.cn/v1/roots/{root_id}/files/{file_id}
